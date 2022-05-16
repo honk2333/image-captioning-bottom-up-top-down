@@ -36,6 +36,7 @@ Results reported on Karpathy test split. Pretrained model can be downloaded by c
 
 <h2> Requirements </h2>
 
+
 python 3.6<br>
 torch 0.4.1<br>
 h5py 2.8<br>

@@ -139,6 +139,7 @@ def create_input_files(dataset,karpathy_json_path,captions_per_image, min_word_f
 
 
 
+
 def init_embedding(embeddings):
     """
     Fills embedding tensor with values from the uniform distribution.
