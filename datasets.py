@@ -63,12 +63,12 @@ class CaptionDataset(Dataset):
         caplen = torch.LongTensor([self.caplens[i]])
         
         if self.split is 'TRAIN':
-            return img, caption, caplen
+            return img.to("cuda"), caption.to("cuda"), caplen.to("cuda")
         else:
             # For validation of testing, also return all 'captions_per_image' captions to find BLEU-4 score
             all_captions = torch.LongTensor(
                 self.captions[((i // self.cpi) * self.cpi):(((i // self.cpi) * self.cpi) + self.cpi)])
-            return img, caption, caplen,all_captions
+            return img, caption, caplen, all_captions
 
     def __len__(self):
         return self.dataset_size

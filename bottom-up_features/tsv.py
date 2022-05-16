@@ -16,15 +16,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import base64
 import csv
 import h5py
-import cPickle
+import _pickle as cPickle
 import numpy as np
 import utils
 from tqdm import tqdm
 
 csv.field_size_limit(sys.maxsize)
 
-FIELDNAMES = ['image_id', 'image_w', 'image_h', 'num_boxes', 'boxes', 'features']
-infile = 'trainval_36/trainval_resnet101_faster_rcnn_genome_36.tsv'
+FIELDNAMES = ['image_id', 'features', 'image_h', 'image_w',  'num_boxes', 'boxes']
+infile = './imgfeat.tsv'
 train_data_file = 'train36.hdf5'
 val_data_file = 'val36.hdf5'
 train_indices_file = 'train36_imgid2idx.pkl'
@@ -41,13 +41,14 @@ if __name__ == '__main__':
     h_val = h5py.File(val_data_file, "w")
 
     if os.path.exists(train_ids_file) and os.path.exists(val_ids_file):
-        train_imgids = cPickle.load(open(train_ids_file))
-        val_imgids = cPickle.load(open(val_ids_file))
+        train_imgids = cPickle.load(open(train_ids_file, 'rb'))
+        val_imgids = cPickle.load(open(val_ids_file, 'rb'))
     else:
-        train_imgids = utils.load_imageid('../data/train2014')
-        val_imgids = utils.load_imageid('../data/val2014')
-        cPickle.dump(train_imgids, open(train_ids_file, 'wb'),protocol=2)
-        cPickle.dump(val_imgids, open(val_ids_file, 'wb'),protocol=2)
+        path = '/home/data_ti4_c/wanghk/data'
+        train_imgids = utils.load_imageid(path+'/train2014')
+        val_imgids = utils.load_imageid(path+'/val2014')
+        cPickle.dump(train_imgids, open(train_ids_file, 'wb') ,protocol=2)
+        cPickle.dump(val_imgids, open(val_ids_file, 'wb') ,protocol=2)
 
     train_indices = {}
     val_indices = {}
@@ -70,17 +71,18 @@ if __name__ == '__main__':
     val_counter = 0
 
     print("reading tsv...")
-    with open(infile, "r+b") as tsv_in_file:
+    with open(infile, "r") as tsv_in_file:
         reader = csv.DictReader(tsv_in_file, delimiter='\t', fieldnames=FIELDNAMES)
         for item in tqdm(reader):
             item['num_boxes'] = int(item['num_boxes'])
             image_id = int(item['image_id'])
             image_w = float(item['image_w'])
             image_h = float(item['image_h'])
+            
             bboxes = np.frombuffer(
-                base64.decodestring(item['boxes']),
+                base64.b64decode(item['boxes']),
                 dtype=np.float32).reshape((item['num_boxes'], -1))
-
+            
             box_width = bboxes[:, 2] - bboxes[:, 0]
             box_height = bboxes[:, 3] - bboxes[:, 1]
             scaled_width = box_width / image_w
@@ -109,8 +111,7 @@ if __name__ == '__main__':
                 train_indices[image_id] = train_counter
                 train_img_bb[train_counter, :, :] = bboxes
                 train_img_features[train_counter, :, :] = np.frombuffer(
-                    base64.decodestring(item['features']),
-                    dtype=np.float32).reshape((item['num_boxes'], -1))
+                    base64.b64decode(item['features']), dtype=np.float32).reshape((item['num_boxes'], -1))
                 train_spatial_img_features[train_counter, :, :] = spatial_features
                 train_counter += 1
             elif image_id in val_imgids:
@@ -118,8 +119,7 @@ if __name__ == '__main__':
                 val_indices[image_id] = val_counter
                 val_img_bb[val_counter, :, :] = bboxes
                 val_img_features[val_counter, :, :] = np.frombuffer(
-                    base64.decodestring(item['features']),
-                    dtype=np.float32).reshape((item['num_boxes'], -1))
+                    base64.b64decode(item['features']), dtype=np.float32).reshape((item['num_boxes'], -1))
                 val_spatial_img_features[val_counter, :, :] = spatial_features
                 val_counter += 1
             else:
