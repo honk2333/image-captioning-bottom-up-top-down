@@ -27,11 +27,11 @@ cudnn.benchmark = True  # set to true only if inputs to model are fixed size; ot
 start_epoch = 0
 epochs = 50  # number of epochs to train for (if early stopping is not triggered)
 epochs_since_improvement = 0  # keeps track of number of epochs since there's been an improvement in validation BLEU
-batch_size = 364
+batch_size = 256
 workers = 1  # for data-loading; right now, only 1 works with h5py
 best_bleu4 = 0.  # BLEU-4 score right now
 print_freq = 100  # print training/validation stats every __ batches
-checkpoint = None  # path to checkpoint, None if none
+checkpoint = 'BEST_1checkpoint_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # path to checkpoint, None if none
 
 
 def main():
@@ -98,7 +98,7 @@ def main():
               criterion_dis=criterion_dis,
               decoder_optimizer=decoder_optimizer,
               epoch=epoch)
-        save_checkpoint(data_name, epoch, epochs_since_improvement, decoder, decoder_optimizer, 0, True)
+        # save_checkpoint(data_name, epoch, epochs_since_improvement, decoder, decoder_optimizer, 0, True)
 
         # One epoch's validation
         recent_bleu4 = validate(val_loader=val_loader,
