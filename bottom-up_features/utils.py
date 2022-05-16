@@ -28,6 +28,7 @@ def load_folder(folder, suffix):
     return imgs
 
 
+
 def load_imageid(folder):
     images = load_folder(folder, 'jpg')
     img_ids = set()

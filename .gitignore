@@ -16,4 +16,4 @@ bert-base-uncased
 *.log
 
 final_dataset/*
-nlg-eval-master
+nlg-eval-master/*
