@@ -27,7 +27,7 @@ cudnn.benchmark = True  # set to true only if inputs to model are fixed size; ot
 start_epoch = 0
 epochs = 50  # number of epochs to train for (if early stopping is not triggered)
 epochs_since_improvement = 0  # keeps track of number of epochs since there's been an improvement in validation BLEU
-batch_size = 256
+batch_size = 364
 workers = 1  # for data-loading; right now, only 1 works with h5py
 best_bleu4 = 0.  # BLEU-4 score right now
 print_freq = 100  # print training/validation stats every __ batches
@@ -67,7 +67,7 @@ def main():
     # Move to GPU, if available
     # decoder = decoder.to(device)
     print(torch.cuda.device_count())
-    decoder = nn.DataParallel(decoder)
+    # decoder = nn.DataParallel(decoder)
     decoder = decoder.cuda()
 
     # Loss functions
@@ -98,6 +98,7 @@ def main():
               criterion_dis=criterion_dis,
               decoder_optimizer=decoder_optimizer,
               epoch=epoch)
+        save_checkpoint(data_name, epoch, epochs_since_improvement, decoder, decoder_optimizer, 0, True)
 
         # One epoch's validation
         recent_bleu4 = validate(val_loader=val_loader,
@@ -132,17 +133,15 @@ def train(train_loader, decoder, criterion_ce, criterion_dis, decoder_optimizer,
     decoder.train()  # train mode (dropout and batchnorm is used)
     losses = AverageMeter()  # loss (per word decoded)
     # Batches
-    for i, (imgs, caps, caplens) in enumerate(tqdm(train_loader)):
+    t = tqdm(train_loader, ncols=110)
+    for i, (imgs, caps, caplens) in enumerate(t):
         
-        # imgs = imgs.to(device)
-        # caps = caps.to(device)
-        # caplens = caplens.to(device)
+        imgs = imgs.to(device)
+        caps = caps.to(device)
+        caplens = caplens.to(device)
         # print(imgs.shape, caps.shape, caplens.shape)
         
         # Forward prop.
-        # print(torch.max(caplens))
-
-
         caplens, sort_ind = caplens.squeeze(1).sort(dim=0, descending=True)
         imgs = imgs[sort_ind]
         caps = caps[sort_ind]
@@ -171,7 +170,7 @@ def train(train_loader, decoder, criterion_ce, criterion_dis, decoder_optimizer,
         loss_d = criterion_dis(scores_d,targets_d.long())
         loss_g = criterion_ce(scores, targets)
         loss = loss_g + (10 * loss_d)
-        
+        t.set_postfix(loss=loss.item())
         # Back prop.
         decoder_optimizer.zero_grad()
         loss.backward()
@@ -184,12 +183,12 @@ def train(train_loader, decoder, criterion_ce, criterion_dis, decoder_optimizer,
         losses.update(loss.item(), sum(decode_lengths))
 
         # Print status
-        if i % print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch, i, 
-                                                                len(train_loader),
-                                                                loss=losses
-                                                                ))
+        # if i % print_freq == 0:
+        #     print('Epoch: [{0}][{1}/{2}]\t'
+        #           'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch, i, 
+        #                                                         len(train_loader),
+        #                                                         loss=losses
+        #                                                         ))
 
 
 def validate(val_loader, decoder, criterion_ce, criterion_dis):
@@ -214,19 +213,19 @@ def validate(val_loader, decoder, criterion_ce, criterion_dis):
 
     # Batches
     with torch.no_grad(): 
-        for i, (imgs, caps, caplens,allcaps) in enumerate(val_loader):
+        for i, (imgs, caps, caplens, allcaps) in enumerate(val_loader):
 
             # Move to device, if available
-            # imgs = imgs.to(device)
-            # caps = caps.to(device)
-            # caplens = caplens.to(device)
+            imgs = imgs.to(device)
+            caps = caps.to(device)
+            caplens = caplens.to(device)
             
             
             caplens, sort_ind = caplens.squeeze(1).sort(dim=0, descending=True)
             imgs = imgs[sort_ind]
             caps = caps[sort_ind]
 
-            scores, scores_d, caps_sorted, decode_lengths = decoder(imgs, caps,caplens.unsqueeze(1))
+            scores, scores_d, caps_sorted, decode_lengths = decoder(imgs, caps, caplens.unsqueeze(1))
             
             #Max-pooling across predicted words across time steps for discriminative supervision
             scores_d = scores_d.max(1)[0]
@@ -242,8 +241,8 @@ def validate(val_loader, decoder, criterion_ce, criterion_dis):
             # Remove timesteps that we didn't decode at, or are pads
             # pack_padded_sequence is an easy trick to do this
             scores_copy = scores.clone()
-            scores, _ = pack_padded_sequence(scores, decode_lengths, batch_first=True)
-            targets, _ = pack_padded_sequence(targets, decode_lengths, batch_first=True)
+            scores= pack_padded_sequence(scores, decode_lengths, batch_first=True).data
+            targets = pack_padded_sequence(targets, decode_lengths, batch_first=True).data
 
             # Calculate loss
             loss_d = criterion_dis(scores_d,targets_d.long())
