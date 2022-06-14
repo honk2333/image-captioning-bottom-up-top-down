@@ -40,6 +40,20 @@ def transfer_npz2tsv(npz_path, tsv_path):
         
         img_feat_encoded = base64.b64encode(img_feat)
         boxes_encoded = base64.b64encode(boxes)
+
+        print(boxes.shape)
+        print(boxes[0])
+        print(type(base64.b64decode(boxes_encoded)))
+        tmp = np.frombuffer(base64.b64decode(img_feat_encoded), dtype=np.float32).reshape(36,-1)
+        print(tmp.shape)
+        print(tmp[0])
+        
+        print(img_feat.shape)
+        print(img_feat[0][:10])
+        ttmp = np.frombuffer(base64.b64decode(img_feat_encoded), dtype=np.float32).reshape(36,-1)
+        print(ttmp.shape)
+        print(ttmp[0])
+        exit(1)
         
 
         row = [image_id, img_feat_encoded, img_h, img_w, num_boxes, boxes_encoded ]
